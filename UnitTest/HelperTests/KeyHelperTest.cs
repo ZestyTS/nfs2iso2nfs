@@ -13,14 +13,14 @@ namespace UnitTest.HelperTests
             var location = Path.Combine(Environment.CurrentDirectory, "GetKey.txt");
             File.Create(location).Dispose();
 
-            Assert.IsNull(KeyHelper.GetKey(location));
+            Assert.IsNull(KeyHelper.GetKeyAsync(location).Result);
             File.Delete(location);
         }
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
-        public void GetKeyNoPath()
+        public async Task GetKeyNoPath()
         {
-            KeyHelper.GetKey("");
+            await KeyHelper.GetKeyAsync("");
         }
 
         #endregion GetKey
