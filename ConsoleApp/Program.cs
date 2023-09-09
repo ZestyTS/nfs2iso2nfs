@@ -38,16 +38,16 @@ namespace ConsoleApp
             if (!keepFiles)
             {
                 Console.WriteLine("Deleting files!");
-                Nfs.DeleteFiles();
+                Nfs.DeleteFilesAsync().RunSynchronously();
                 Console.WriteLine("Deleted!");
                 Console.WriteLine();
             }
         }
         private static void Decrypt()
         {
-            var header = ByteHelper.GetHeader(Nfs.Dir + Path.DirectorySeparatorChar + "hif_000000.nfs");
+            var header = ByteHelper.GetHeaderAsync(Nfs.Dir + Path.DirectorySeparatorChar + "hif_000000.nfs").Result;
             Console.WriteLine("Combining NFS Files");
-            Nfs.CombineNFSFiles();
+            Nfs.CombineNFSFilesAsync().RunSynchronously();
             Console.WriteLine("Combined");
             Console.WriteLine();
 
@@ -69,7 +69,7 @@ namespace ConsoleApp
         private static void Encrypt()
         {
             Console.WriteLine("Do Patching if applicable!");
-            Patch.DoThePatching();
+            Patch.DoThePatchingAsync().RunSynchronously();
             Console.WriteLine("Patching Done!");
             Console.WriteLine();
 
@@ -89,7 +89,7 @@ namespace ConsoleApp
             Console.WriteLine();
 
             Console.WriteLine("Split NFS File");
-            Nfs.SplitFile();
+            
             Console.WriteLine("Splitted!");
             Console.WriteLine();
         }
@@ -290,7 +290,7 @@ namespace ConsoleApp
                 Console.WriteLine("ERROR: Could not find AES key file! Exiting...");
                 return null;
             }
-            var key = KeyHelper.GetKey(keyFile);
+            var key = KeyHelper.GetKeyAsync(keyFile).Result;
             if (key == null)
             {
                 Console.WriteLine("ERROR: AES key file has wrong file size! Exiting...");
@@ -314,7 +314,7 @@ namespace ConsoleApp
                 }
                 else
                 {
-                    Nfs.CommonKey = KeyHelper.GetKey(wiiKeyFile);
+                    Nfs.CommonKey = KeyHelper.GetKeyAsync(wiiKeyFile).Result;
                     if (Nfs.CommonKey == null)
                     {
                         Console.WriteLine("ERROR: Wii common key file has wrong file size! Exiting...");
