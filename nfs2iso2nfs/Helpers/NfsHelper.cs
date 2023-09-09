@@ -2,101 +2,100 @@
 {
     public class NfsHelper
     {
-        public static void SplitNFSFile(string hif, int size)
-        {
-            using var nfs = new BinaryReader(File.OpenRead(hif));
-            long baseStreamSize = nfs.BaseStream.Length;
-            var i = 0;
-            do
-            {
-                var nfsTemp = new BinaryWriter(File.OpenWrite(Directory.GetCurrentDirectory() + Path.DirectorySeparatorChar + "hif_" + string.Format("{0:D6}", i) + ".nfs"));
-                nfsTemp.Write(nfs.ReadBytes(baseStreamSize > size ? size : size));
-                size -= size;
-                i++;
-            } while (size > 0);
-        }
         public static void EncryptNFS(string inFile, string outFile, byte[] key, int size, byte[] header)
         {
-            using var er = new BinaryReader(File.OpenRead(inFile));
-            using var ew = new BinaryWriter(File.OpenWrite(outFile));
-            ew.Write(header);
-            CryptNFS(er, ew, key, size, true);
+            ProcessFile(inFile, outFile, key, size, header, true);
         }
+
         public static void DecryptNFS(string inFile, string outFile, byte[] key, int size)
         {
+            ProcessFile(inFile, outFile, key, size);
+        }
+
+        private static void ProcessFile(string inFile, string outFile, byte[] key, int size, byte[]? header = null, bool encrypt = false)
+        {
             using var er = new BinaryReader(File.OpenRead(inFile));
             using var ew = new BinaryWriter(File.OpenWrite(outFile));
-            CryptNFS(er, ew, key, size);
+
+            if (header != null)
+            {
+                ew.Write(header);
+            }
+
+            CryptNFS(er, ew, key, size, encrypt);
         }
+
         private static void CryptNFS(BinaryReader er, BinaryWriter ew, byte[] key, int size, bool encrypt = false)
         {
+            // Initialize Initialization Vectors (IVs)
             var iv = ByteHelper.BuildZero(key.Length);
+            var block_iv = new byte[] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1F, 0x00 };
 
-            byte[] block_iv = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1F, 0x00 };
-            var sector = new byte[size];
+            var remainingSize = er.BaseStream.Length;
             var timer = 0;
-            var i = 0;
-            //init size
-            long leftSize = er.BaseStream.Length;
-            do
-            {
-                if (timer == 8000)
-                {
-                    timer = 0;
-                    i++;
-                }
-                timer++;
-                sector = er.ReadBytes(leftSize > size ? size: (int)leftSize);
 
-                if (ew.BaseStream.Position >= 0x18000)                               //use the different IVs if writing game partition data
+            while (remainingSize > 0)
+            {
+                var chunkSize = remainingSize > size ? size : (int)remainingSize;
+
+                var sector = er.ReadBytes(chunkSize);
+
+                // Determine which IV to use based on position in the file.
+                if (ew.BaseStream.Position >= 0x18000)
                 {
                     iv = block_iv;
                 }
 
-                if (ew.BaseStream.Position < 0x18000)                        // if encrypting and not game partition
-                    sector = KeyHelper.CryptAes128Cbc(KeyHelper.CreateAes128Cbc(key, iv),sector, encrypt);                    // use zero IV
+                sector = KeyHelper.CryptAes128Cbc(KeyHelper.CreateAes128Cbc(key, iv), sector, encrypt);
 
-                if (ew.BaseStream.Position >= 0x18000)                       // if encrypting game partition
+                // If encrypting the game partition, update the IV.
+                if (ew.BaseStream.Position >= 0x18000)
                 {
-                    sector = KeyHelper.CryptAes128Cbc(KeyHelper.CreateAes128Cbc(key, iv), sector, encrypt);                       // use different IV for each block
-                    block_iv[15]++;                                                 // increment the value after writing
-                    if (block_iv[15] == 0)                                          // and go further if necessary
-                    {
-                        block_iv[14]++;
-                        if (block_iv[14] == 0)
-                        {
-                            block_iv[13]++;
-                            if (block_iv[13] == 0)
-                            {
-                                block_iv[12]++;                                     // I suppose it's a 4 byte value...?
-                            }                                                       // it won't ever happen anyway
-                        }
-                    }
+                    block_iv = IncrementBlockIV(block_iv);
                 }
 
-                //write it to outfile
                 ew.Write(sector);
+                remainingSize -= size;
+                timer++;
 
-                //decrease remaining size
-                leftSize -= size;
-
-                //loop till end of file
-            } while (leftSize > 0);
+                if (timer >= 8000)
+                {
+                    timer = 0;
+                }
+            }
         }
+
+        private static byte[] IncrementBlockIV(byte[] block_iv)
+        {
+            if (++block_iv[15] == 0)
+            {
+                if (++block_iv[14] == 0)
+                {
+                    if (++block_iv[13] == 0)
+                    {
+                        block_iv[12]++;
+                    }
+                }
+            }
+
+            return block_iv;
+        }
+
         public static long[] EncryptManipulateIso(string inFile, string outFile, int sectorSize, byte[] commonKey)
         {
-            using var er = new BinaryReader(File.OpenRead(inFile));
-            using var ew = new BinaryWriter(File.OpenWrite(outFile));
-            return ManipulateIso(er, ew, sectorSize, commonKey);
+            return ManipulateIso(inFile, outFile, sectorSize, commonKey);
         }
+
         public static void DecryptManipulateIso(string inFile, string outFile, int sectorSize, byte[] commonKey)
         {
+            ManipulateIso(inFile, outFile, sectorSize, commonKey, true);
+        }
+
+        private static long[] ManipulateIso(string inFile, string outFile, int sectorSize, byte[] commonKey, bool enc = false)
+        {
             using var er = new BinaryReader(File.OpenRead(inFile));
             using var ew = new BinaryWriter(File.OpenWrite(outFile));
-            ManipulateIso(er, ew, sectorSize, commonKey, true);
-        }
-        private static long[] ManipulateIso(BinaryReader er, BinaryWriter ew, int sectorSize, byte[] commonKey, bool enc = false)
-        {
+
             long[] sizeInfo = new long[2];
             ew.Write(er.ReadBytes(0x40000));
 
