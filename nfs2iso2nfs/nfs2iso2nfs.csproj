@@ -1,32 +1,29 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-    <Authors>ZestyTS</Authors>
-    <Description>Converts nfs files to iso and back</Description>
-    <RepositoryUrl>https://github.com/ZestyTS/nfs2iso2nfs</RepositoryUrl>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
-    <RepositoryType>git</RepositoryType>
-    <PackageTags>WiiU; Wii U; packing; nfs; iso</PackageTags>
-    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+	  <TargetFramework>net6.0</TargetFramework>
+	  <ImplicitUsings>enable</ImplicitUsings>
+	  <Nullable>enable</Nullable>
+	  <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+	  <Authors>ZestyTS</Authors>
+	  <Description>Converts nfs files to iso and back</Description>
+	  <RepositoryUrl>https://github.com/ZestyTS/nfs2iso2nfs</RepositoryUrl>
+	  <PackageReadmeFile>README.md</PackageReadmeFile>
+	  <RepositoryType>git</RepositoryType>
+	  <PackageTags>WiiU; Wii U; packing; nfs; iso</PackageTags>
+	  <PackageLicenseFile>LICENSE</PackageLicenseFile>
   </PropertyGroup>
 
   <ItemGroup>
-<<<<<<< Updated upstream
-    <None Include="..\LICENSE">
-      <Pack>True</Pack>
-      <PackagePath>\</PackagePath>
-    </None>
-    <None Include="..\README.md">
-      <Pack>True</Pack>
-      <PackagePath>\</PackagePath>
-    </None>
-=======
+	  <None Include="..\LICENSE">
+		  <Pack>True</Pack>
+		  <PackagePath>\</PackagePath>
+	  </None>
+	  <None Include="..\README.md">
+		  <Pack>True</Pack>
+		  <PackagePath>\</PackagePath>
+	  </None>
     <PackageReference Include="Microsoft.Extensions.Logging" Version="7.0.0" />
->>>>>>> Stashed changes
   </ItemGroup>
 
 </Project>
