@@ -1,5 +1,5 @@
 ﻿using nfs2iso2nfs.Helpers;
-
+using nfs2iso2nfs.Models;
 namespace nfs2iso2nfs.Models
 {
     public class Patch
@@ -17,31 +17,39 @@ namespace nfs2iso2nfs.Models
         {
             FwFile = fwFile;
         }
-        public void DoThePatching()
+        public async Task DoThePatchingAsync()
         {
-            using var inputIos = new MemoryStream(File.ReadAllBytes(FwFile));                     //copy fw.img into a memory stream
+            // Asynchronously read file into a memory stream
+            using var inputMemoryStream = new MemoryStream();
+            using (var fileStream = new FileStream(FwFile, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize: 4096, useAsync: true))
+                await fileStream.CopyToAsync(inputMemoryStream); //copy fw.img into a memory stream
+
+            // Now, create an AsyncMemoryStream from the MemoryStream
+            using var inputIos = new AsyncMemoryStream(inputMemoryStream);
+
             PatcherHelper.CheckIfRev509(inputIos);
 
             if (!KeepLegit)
-                PatcherHelper.DontKeepLegit(inputIos);
+                await PatcherHelper.DontKeepLegitAsync(inputIos);
             if (MapShoulderToTrigger)
-                PatcherHelper.MapShoulderToTrigger(inputIos);
+                await PatcherHelper.MapShoulderToTriggerAsync(inputIos);
             if (HorizWiimote || VertWiimote)
-                PatcherHelper.EnableWiiRemoteEmulation(inputIos);
+                await PatcherHelper.EnableWiiRemoteEmulationAsync(inputIos);
             if (HorizWiimote)
-                PatcherHelper.EnableHorizontalWiiRemoteEmulation(inputIos);
+                await PatcherHelper.EnableHorizontalWiiRemoteEmulationAsync(inputIos);
             if (Homebrew)
-                PatcherHelper.EnableProperInputInHomebrew(inputIos);
+                await PatcherHelper.EnableProperInputInHomebrewAsync(inputIos);
             if (PassThrough)
-                PatcherHelper.WiiMotePassthrough(inputIos);
+                await PatcherHelper.WiiMotePassthroughAsync(inputIos);
             if (InstantCC)
-                PatcherHelper.InstantCC(inputIos);
+                await PatcherHelper.InstantCCAsync(inputIos);
             if (NoCC)
-                PatcherHelper.NoCC(inputIos);
+                await PatcherHelper.NoCCAsync(inputIos);
 
-            using var patchedFile = File.OpenWrite(FwFile);
-            inputIos.WriteTo(patchedFile);
+            // Asynchronously write the patched memory stream back to file
+            using var patchedFile = new FileStream(FwFile, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None, bufferSize: 4096, useAsync: true);
+            inputIos.Position = 0;  // Reset the position before writing
+            await inputIos.CopyToAsync(patchedFile);
         }
-
     }
 }
