@@ -12,14 +12,14 @@ namespace UnitTest.HelperTests
             var location = Path.Combine(Environment.CurrentDirectory, "GetHeaderEmptyFile.txt");
             File.Create(location).Dispose();
 
-            Assert.IsNotNull(ByteHelper.GetHeader(location));
+            Assert.IsNotNull(ByteHelper.GetHeaderAsync(location).Result);
             File.Delete(location);
         }
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
-        public void GetHeaderNoPath()
+        public async Task GetHeaderNoPath()
         {
-            ByteHelper.GetHeader("");
+            await ByteHelper.GetHeaderAsync("");
         }
 
         #endregion GetHeader

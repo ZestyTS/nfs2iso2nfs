@@ -1,9 +1,32 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
+	  <ImplicitUsings>enable</ImplicitUsings>
+	  <Nullable>enable</Nullable>
+	  <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+	  <Authors>ZestyTS</Authors>
+	  <Description>Converts nfs files to iso and back</Description>
+	  <RepositoryUrl>https://github.com/ZestyTS/nfs2iso2nfs</RepositoryUrl>
+	  <PackageReadmeFile>README.md</PackageReadmeFile>
+	  <RepositoryType>git</RepositoryType>
+	  <PackageTags>WiiU; Wii U; packing; nfs; iso; nfs2iso; iso2nfs</PackageTags>
+	  <PackageLicenseFile>LICENSE</PackageLicenseFile>
+	  <Version>1.0.1</Version>
+	  <TargetFrameworks>net7.0;net6.0</TargetFrameworks>
+	  <TargetFramework>net6.0</TargetFramework>
+	  <PackageProjectUrl>https://github.com/ZestyTS/nfs2iso2nfs</PackageProjectUrl>
   </PropertyGroup>
+
+  <ItemGroup>
+	  <None Include="..\LICENSE">
+		  <Pack>True</Pack>
+		  <PackagePath>\</PackagePath>
+	  </None>
+	  <None Include="..\README.md">
+		  <Pack>True</Pack>
+		  <PackagePath>\</PackagePath>
+	  </None>
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="7.0.0" />
+  </ItemGroup>
 
 </Project>

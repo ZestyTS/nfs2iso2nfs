@@ -1,47 +1,79 @@
 ﻿using nfs2iso2nfs.Helpers;
 using System;
+using System.Buffers;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace nfs2iso2nfs.Models
 {
     public class Nfs
     {
-        public string Hif = "hif.nfs";
-        public string HifDec = "hif_dec.nfs";
-        public string HifUnpack = "hif_unpack.nfs";
+        public string Hif { get; set; } = "hif.nfs";
+        public string HifDec { get; set; } = "hif_dec.nfs";
+        public string HifUnpack { get; set; } = "hif_unpack.nfs";
         public string Dir { get; set; } = "";
-        public int HeaderSize = 0x200;
-        public int SectorSize = 0x8000;
-        public int Size = 0xFA00000;
+        public int HeaderSize { get; set; } = 0x200;
+        public int SectorSize { get; set; } = 0x8000;
+        public int Size { get; set; } = 0xFA00000;
         public byte[] Key { get; set; } = Array.Empty<byte>();
-        public byte[] CommonKey { get; set; } = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-        public string NfsOutputDirectory { get; set; } = Directory.GetCurrentDirectory() + Path.DirectorySeparatorChar;
-        public void CombineNFSFiles()
-        {
-            using var nfs = new BinaryWriter(File.OpenWrite(Hif));
-            var nfsNo = -1;
-            while (File.Exists(Dir + Path.DirectorySeparatorChar + "hif_" + string.Format("{0:D6}", nfsNo + 1) + ".nfs"))
-                nfsNo++;
+        public byte[] CommonKey { get; set; } = new byte[16];
+        public string NfsOutputDirectory { get; set; } = Path.Combine(Directory.GetCurrentDirectory(), Path.DirectorySeparatorChar.ToString());
 
-            for (var i = 0; i <= nfsNo; i++)
+        private static int CombineBytesToInt(byte a, byte b, byte c, byte d) => (a << 24) | (b << 16) | (c << 8) | d;
+
+        public async Task CombineNFSFilesAsync()
+        {
+            try
             {
-                var nfsTemp = new BinaryReader(File.OpenRead(Dir + Path.DirectorySeparatorChar + "hif_" + string.Format("{0:D6}", i) + ".nfs"));
-                if (i == 0)
+                using var nfs = new BinaryWriter(File.OpenWrite(Hif));
+
+                // Use a list to store filenames for clarity and avoid repeatedly checking existence.
+                var nfsFiles = new List<string>();
+                int i = 0;
+                while (File.Exists($"{Dir}{Path.DirectorySeparatorChar}hif_{i:D6}.nfs"))
                 {
-                    nfsTemp.ReadBytes(HeaderSize);
-                    nfs.Write(nfsTemp.ReadBytes((int)nfsTemp.BaseStream.Length - HeaderSize));
+                    nfsFiles.Add($"{Dir}{Path.DirectorySeparatorChar}hif_{i:D6}.nfs");
+                    i++;
                 }
-                else
-                    nfs.Write(nfsTemp.ReadBytes((int)nfsTemp.BaseStream.Length));
+
+                var buffer = ArrayPool<byte>.Shared.Rent(HeaderSize);
+                try
+                {
+                    foreach (var nfsFile in nfsFiles)
+                    {
+                        using var nfsTemp = new BinaryReader(File.OpenRead(nfsFile));
+
+                        var readSize = nfsFile == nfsFiles.First() ? nfsTemp.BaseStream.Length - HeaderSize : nfsTemp.BaseStream.Length;
+
+                        if (readSize > buffer.Length)
+                        {
+                            ArrayPool<byte>.Shared.Return(buffer);
+                            buffer = ArrayPool<byte>.Shared.Rent((int)readSize);
+                        }
+
+                        await nfsTemp.BaseStream.ReadAsync(buffer.AsMemory(0, (int)readSize));
+                        await nfs.BaseStream.WriteAsync(buffer.AsMemory(0, (int)readSize));
+                    }
+                }
+                finally
+                {
+                    ArrayPool<byte>.Shared.Return(buffer);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Handle or log exception as needed
+                throw new InvalidOperationException("An error occurred while combining NFS files.", ex);
             }
         }
-        public void DeleteFiles()
+
+        public async Task DeleteFilesAsync()
         {
-            foreach (var file in new List<string>() { Hif, HifDec, HifUnpack })
-                File.Delete(file);
+            foreach (var file in new[] { Hif, HifDec, HifUnpack })
+                if (File.Exists(file))
+                    await Task.Run(() => File.Delete(file));
         }
 
         public void Unpack(byte[] header)
@@ -167,20 +199,34 @@ namespace nfs2iso2nfs.Models
             }
             return header;
         }
-        public void SplitFile()
+
+        public async Task SplitFileAsync()
         {
             using var nfs = new BinaryReader(File.OpenRead(Hif));
             long size = nfs.BaseStream.Length;
             int i = 0;
 
-            do
+            var buffer = ArrayPool<byte>.Shared.Rent(Size);
+            try
             {
-                Console.WriteLine("Building hif_" + string.Format("{0:D6}", i) + ".nfs...");
-                var nfsTemp = new BinaryWriter(File.OpenWrite(NfsOutputDirectory + "hif_" + string.Format("{0:D6}", i) + ".nfs"));
-                nfsTemp.Write(nfs.ReadBytes(size > Size ? Size : (int)size));
-                size -= Size;
-                i++;
-            } while (size > 0);
+                while (size > 0)
+                {
+                    Console.WriteLine($"Building hif_{i:D6}.nfs...");
+
+                    var readSize = size > Size ? Size : (int)size;
+                    await nfs.BaseStream.ReadAsync(buffer.AsMemory(0, readSize));
+
+                    using var nfsTemp = new BinaryWriter(File.OpenWrite(Path.Combine(NfsOutputDirectory, $"hif_{i:D6}.nfs")));
+                    nfsTemp.Write(buffer, 0, readSize);
+
+                    size -= Size;
+                    i++;
+                }
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
+            }
         }
     }
 }
