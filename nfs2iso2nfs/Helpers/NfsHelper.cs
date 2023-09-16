@@ -18,9 +18,7 @@
             using var ew = new BinaryWriter(File.OpenWrite(outFile));
 
             if (header != null)
-            {
                 ew.Write(header);
-            }
 
             CryptNFS(er, ew, key, size, encrypt);
         }
@@ -42,41 +40,29 @@
 
                 // Determine which IV to use based on position in the file.
                 if (ew.BaseStream.Position >= 0x18000)
-                {
                     iv = block_iv;
-                }
 
                 sector = KeyHelper.CryptAes128Cbc(KeyHelper.CreateAes128Cbc(key, iv), sector, encrypt);
 
                 // If encrypting the game partition, update the IV.
                 if (ew.BaseStream.Position >= 0x18000)
-                {
                     block_iv = IncrementBlockIV(block_iv);
-                }
 
                 ew.Write(sector);
                 remainingSize -= size;
                 timer++;
 
                 if (timer >= 8000)
-                {
                     timer = 0;
-                }
             }
         }
 
         private static byte[] IncrementBlockIV(byte[] block_iv)
         {
             if (++block_iv[15] == 0)
-            {
                 if (++block_iv[14] == 0)
-                {
                     if (++block_iv[13] == 0)
-                    {
                         block_iv[12]++;
-                    }
-                }
-            }
 
             return block_iv;
         }
