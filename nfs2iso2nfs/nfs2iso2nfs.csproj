@@ -15,6 +15,7 @@
 	  <TargetFrameworks>net7.0;net6.0</TargetFrameworks>
 	  <TargetFramework>net6.0</TargetFramework>
 	  <PackageProjectUrl>https://github.com/ZestyTS/nfs2iso2nfs</PackageProjectUrl>
+	  <PackageReleaseNotes>Added support to .Net 7, refactored the code to be async, and added a logger</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
