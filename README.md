@@ -10,7 +10,7 @@ Convert nfs files to iso and back
 * Added a logger
   * ILogger < Pack > logger
 
-### Example
+### Examples
 * No Logging
   * string[] args = {"-enc", "-homebrew", "-iso", iso, "-fwimg", fwImg, "-key", htk, "-output", output};
   * var packInstance = new nfs2iso2nfs.Pack();
